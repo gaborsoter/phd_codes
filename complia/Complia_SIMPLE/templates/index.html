@@ -1,0 +1,189 @@
+<html>
+  
+  <head>
+    <title>Video Streaming Demonstration</title>
+    <style>
+        button {
+            background-color: #4CAF50; /* Green */
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 17px;
+        }
+
+        .midi {
+            visibility: hidden;
+        }
+
+        #back {
+            background-color: #FF0000;
+        }
+
+        input[type=text]:focus {
+            background-color: lightblue;
+        }
+
+        .status{
+            color: red;
+            display: none
+        }
+
+        #settings {
+            float: left;
+        }
+
+        #metrics{
+            float: left;
+        }
+    </style>
+
+    
+    <script type=text/javascript src="{{ url_for('static', filename='jquery-3.2.1.min.js') }}"></script>
+  </head>
+  
+
+
+  <body>
+    <img id="video" src="{{ url_for('video_feed') }}">
+    <br>
+    
+
+    <form id="settings" method="POST" action="/settings">
+        <input type="checkbox" name="save" value="saveme"> Save <br>
+        
+
+        <h3> Dimension Settings: </h3>
+
+    {% for key, value in settings.dimensions.items() %}
+        {{key}}: <input type="text" name="dimensions:{{key}}" value="{{value}}">
+        <br>
+    {% endfor %}
+
+        <h3> Tracker Settings: </h3>
+
+    {% for key, value in settings.tracker.items() %}
+        {{key}}: <input type="text" name="tracker:{{key}}" value="{{value}}">
+        <br>
+    {% endfor %}
+
+      
+    </form>
+
+
+
+    <h3 class="status">UPDATE FAILED</h3>
+
+    <button class="update_mode" id="update" onclick="update()">UPDATE</button>
+    <button class="update_mode" id="set_midi" onclick="enter_midi_mode()">SET MIDI</button>
+
+    <h1 class="midi">SET MIDI</h1>
+    <button class="midi" id="midi_x" onclick="midi_x()">X</button>
+    <button class="midi" id="midi_y" onclick="midi_y()">Y</button>
+    <button class="midi" id="midi_z" onclick="midi_z()">Z</button>
+
+    <button class="midi" id="back" onclick="exit_midi_mode()">Back</button>
+    <br>
+    
+    <h3> Metrics </h3>
+    <ul id=metrics></ul>
+    <br>
+
+
+    <script>
+    function update() {
+        // Send form to server
+        var element = document.getElementById("video");
+        element.parentNode.removeChild(element);
+        document.getElementById("settings").submit();
+    }
+
+    function midi_mode_css(){
+        $("#settings").children().attr("disabled", "disabled" );
+        $(".update_mode").css("display", "none");
+
+        $(".midi").css("visibility", "visible");
+        $(".status").css("display", "none");
+
+    }
+
+    function enter_midi_mode() {
+        $.post("/enter_midi_mode", {
+            success: function(data, status){
+                midi_mode_css()
+            },
+            error: function(data, status){
+                //TODO: Status message
+            }
+        });
+    }
+
+    function update_mode(){
+        $(".update_mode").css("display", "inline-block");
+        $(".midi").css("visibility", "hidden");
+        $("#settings").children().attr("disabled", "enabled");
+    }
+
+    function set_midi(url){
+        $.post(url, {
+            success: function(data, status){
+                //update_mode();
+                $(".status").css("display", "none");
+            },
+            error: function(data, status){
+                //update_mode();
+                //TODO: The error event always seems to fire regardless
+                //$(".status").css("display", "block");
+            }
+        });
+        
+    }
+
+    function exit_midi_mode(){
+        $.post("/exit_midi_mode", {
+            success: function(data, status){
+                update_mode();
+            },
+            error: function(data, status){
+                update_mode();
+            }
+        });
+        
+    }
+
+    function midi_x() {
+        set_midi("/midi_x");
+    }
+
+    function midi_y() {
+        set_midi("/midi_y");
+    }
+
+    function midi_z() {
+        set_midi("/midi_z");
+    }
+
+    setInterval(function(){
+        $.getJSON( "/metrics", function( data ) {
+            $(".metric").remove()
+
+            var items = [];
+            $.each( data, function( key, val ) {
+                $("#metrics").append( "<li class='metric'>" + key + ": " + val + "</li>" );
+            });
+        });
+
+    }, 50);
+
+
+
+
+    </script>
+
+
+  </body>
+
+
+</html>
